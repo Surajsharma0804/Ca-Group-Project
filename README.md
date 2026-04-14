@@ -1,4 +1,6 @@
-# Arena LPU
+# Ca-Group-Project
+
+## Arena LPU
 
 A polished multi-page hackathon website with:
 
