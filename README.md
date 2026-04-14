@@ -1,0 +1,53 @@
+# Arena LPU
+
+A polished multi-page hackathon website with:
+
+- frontend: HTML, CSS, JavaScript
+- backend: Node.js, Express
+- payments: Razorpay UPI QR for paid events
+- storage: lightweight JSON persistence for registrations and contact submissions
+
+## Project structure
+
+- `public/index.html` home page
+- `public/events.html` events page
+- `public/gallery.html` gallery page
+- `public/contact.html` contact page
+- `public/styles.css` shared frontend styling
+- `public/script.js` shared frontend behavior and registration flow
+- `backend/server.js` Express server, validation, registrations, and Razorpay routes
+- `.env.example` sample environment configuration
+
+## What's improved
+
+- paid and free events now use different registration flows
+- Razorpay keys move to environment variables instead of hardcoded source
+- contact form submissions save on the backend
+- successful free and paid registrations are persisted in `backend/data`
+- paid events use single-use UPI QR sessions with server-side verification
+- event pricing and team-size rules are enforced on the server
+
+## Setup
+
+1. Run `npm install`
+2. Copy `.env.example` to `.env`
+3. Add your Razorpay keys and allowed frontend origins
+4. Run `npm run dev`
+5. Open `http://localhost:3001`
+
+## Routes
+
+- `GET /api/health`
+- `POST /api/contact`
+- `POST /api/register-free`
+- `POST /api/create-upi-session`
+- `GET /api/payment-status/:sessionId`
+- `POST /api/payment-session/:sessionId/cancel`
+- `POST /api/razorpay/webhook`
+
+## Notes
+
+- Use Razorpay test credentials first
+- Set `ALLOWED_ORIGINS` to your deployed frontend domain in production
+- Registrations and contacts are stored in local JSON files for now
+- For higher scale production, replace JSON storage with a real database and connect social links/email delivery

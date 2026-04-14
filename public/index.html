@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arena LPU | Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="home">
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">&lt;/&gt;</span>
+          <span>
+            <span class="brand-top">Arena Community</span>
+            <span class="brand-name">Arena LPU</span>
+          </span>
+        </a>
+
+        <nav class="desktop-nav">
+          <a href="index.html">Home</a>
+          <a href="events.html">Events</a>
+          <a href="gallery.html">Gallery</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle type="button">Light Mode</button>
+          <button class="menu-toggle" id="menuToggle" type="button" aria-controls="mobileNav" aria-expanded="false">Menu</button>
+        </div>
+      </div>
+
+      <div class="mobile-nav" id="mobileNav">
+        <a href="index.html">Home</a>
+        <a href="events.html">Events</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="contact.html">Contact</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-section hero-simple">
+        <div class="hero-overlay"></div>
+        <div class="container hero-content">
+          <p class="eyebrow">Arena LPU presents</p>
+          <h1>Arena<span class="gradient-text">LPU</span></h1>
+          <p class="hero-copy">
+            LPU's CSE community for hackathons, workshops, and coding competitions.
+            Discover current events and register in minutes.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="events.html">Register for HackLPU</a>
+            <a class="secondary-button" href="gallery.html">View Winning Moments</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-section">
+        <div class="container stats-grid">
+          <div class="stat-card">
+            <strong>36 hrs</strong>
+            <span>Flagship hackathon sprint</span>
+          </div>
+          <div class="stat-card">
+            <strong>4 tracks</strong>
+            <span>Product themes</span>
+          </div>
+          <div class="stat-card">
+            <strong>500+</strong>
+            <span>CSE student builders</span>
+          </div>
+          <div class="stat-card">
+            <strong>Year-round</strong>
+            <span>Events and learning</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt-section" id="homeMomentsSlideshow">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Past Event Highlights</p>
+            <h2>Winning moments from previous Arena events.</h2>
+          </div>
+
+          <div class="moments-slider">
+            <button class="slider-nav" id="momentsPrev" type="button" aria-label="Previous moment">&#8249;</button>
+            <div class="moments-viewport" id="momentsViewport">
+              <article class="moment-slide active" data-theme="one">
+                <div class="moment-media"></div>
+                <div class="moment-copy">
+                  <h3>HackLPU 2.0 Winners</h3>
+                  <p>Top teams after final jury demos and prize announcements.</p>
+                </div>
+              </article>
+              <article class="moment-slide" data-theme="two">
+                <div class="moment-media"></div>
+                <div class="moment-copy">
+                  <h3>Prototype Showcase</h3>
+                  <p>Students presenting working prototypes to mentors and peers.</p>
+                </div>
+              </article>
+              <article class="moment-slide" data-theme="three">
+                <div class="moment-media"></div>
+                <div class="moment-copy">
+                  <h3>Workshop Graduation</h3>
+                  <p>Completion milestone from the Web Dev Bootcamp cohort.</p>
+                </div>
+              </article>
+              <article class="moment-slide" data-theme="four">
+                <div class="moment-media"></div>
+                <div class="moment-copy">
+                  <h3>Community Demo Night</h3>
+                  <p>Live demos, team feedback, and collaboration announcements.</p>
+                </div>
+              </article>
+            </div>
+            <button class="slider-nav" id="momentsNext" type="button" aria-label="Next moment">&#8250;</button>
+          </div>
+
+          <div class="slider-dots" id="momentsDots" aria-label="Slideshow indicators"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container two-column">
+          <div>
+            <div class="section-heading left">
+              <p class="eyebrow">About Arena</p>
+              <h2>Built for CSE students who want to learn fast and build real things.</h2>
+            </div>
+            <p class="body-copy">
+              Arena LPU is a student-led CSE club focused on hackathons, workshops, contests, and peer learning.
+              The goal is simple: give students a better place to discover events, register easily, and stay active in the community.
+            </p>
+            <p class="body-copy">
+              Clear schedules, direct registration, and strong event execution for every season.
+            </p>
+          </div>
+          <div class="image-stack">
+            <div class="image-card image-one">Hack Nights</div>
+            <div class="image-card image-two">Student Demos</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt-section">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Why Arena Works</p>
+            <h2>Fast decisions. Smooth registration. Reliable updates.</h2>
+          </div>
+          <div class="card-grid three">
+            <article class="event-card">
+              <div class="card-top"><span class="tag">Fast</span></div>
+              <h3>Clear event details</h3>
+              <p>Everything important is visible at a glance: format, date, and registration status.</p>
+            </article>
+            <article class="event-card">
+              <div class="card-top"><span class="tag">Clean</span></div>
+              <h3>Quick registration</h3>
+              <p>A short flow designed for both solo and team participation.</p>
+            </article>
+            <article class="event-card">
+              <div class="card-top"><span class="tag">Trusted</span></div>
+              <h3>Reliable confirmations</h3>
+              <p>Registrations and submissions are captured and confirmed consistently.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section hidden" id="highlightsSection">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Current Highlights</p>
+            <h2>Featured experiences for Arena students.</h2>
+          </div>
+          <div class="card-grid three" id="highlightsGrid"></div>
+        </div>
+      </section>
+
+      <section class="section alt-section hidden" id="homeUpcomingSection">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Upcoming Events</p>
+            <h2>Don't miss what is next at Arena LPU.</h2>
+          </div>
+
+          <div class="card-grid three" id="homeUpcomingGrid"></div>
+
+          <div class="centered-link">
+            <a class="inline-link" href="events.html">View all events</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt-section hidden" id="testimonialsSection">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">What Members Say</p>
+            <h2>Real student voices from the community.</h2>
+          </div>
+
+          <div class="card-grid three" id="testimonialsGrid"></div>
+        </div>
+      </section>
+
+      <section class="section hidden" id="faqsSection">
+        <div class="container narrow">
+          <div class="section-heading">
+            <p class="eyebrow">FAQs</p>
+            <h2>Quick answers for students.</h2>
+          </div>
+
+          <div class="faq-list" id="faqsList"></div>
+        </div>
+      </section>
+
+      <section class="section alt-section hidden" id="volunteerSection">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Volunteer With Arena</p>
+            <h2>Apply for volunteer roles when vacancies open.</h2>
+            <p id="volunteerIntro">Share your details and interests. If a relevant volunteer vacancy is available, the organizing team will contact you.</p>
+          </div>
+
+          <div class="volunteer-shell">
+            <div class="volunteer-meta">
+              <span class="tag" id="volunteerBadge">Open Application Pool</span>
+              <p class="body-copy" id="volunteerNote">This form is for future volunteer opportunities across events, operations, design, and outreach.</p>
+            </div>
+
+            <form class="contact-form volunteer-form" id="volunteerForm">
+              <label>
+                <span>Full Name</span>
+                <input type="text" id="volunteerName" autocomplete="name" required />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" id="volunteerEmail" autocomplete="email" required />
+              </label>
+              <label>
+                <span>Phone Number</span>
+                <input type="text" id="volunteerPhone" autocomplete="tel" required />
+              </label>
+              <label>
+                <span>Preferred Area</span>
+                <select id="volunteerArea" required>
+                  <option value="">Select one</option>
+                  <option value="Event Operations">Event Operations</option>
+                  <option value="Design & Media">Design & Media</option>
+                  <option value="Technical Support">Technical Support</option>
+                  <option value="Outreach & PR">Outreach & PR</option>
+                </select>
+              </label>
+              <label class="full-span">
+                <span>Why do you want to volunteer?</span>
+                <textarea id="volunteerMessage" rows="4" required></textarea>
+              </label>
+              <button class="primary-button full-width" id="volunteerSubmitButton" type="submit">Submit Volunteer Application</button>
+              <p class="helper-text" id="volunteerSuccess"></p>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="cta-panel">
+            <p class="eyebrow">Ready to Build?</p>
+            <h2>Join the Arena LPU community and register for your next event.</h2>
+            <p>Pick an event, reserve your slot, and get started.</p>
+            <div class="hero-actions">
+              <a class="primary-button" href="events.html">Register for HackLPU</a>
+              <a class="secondary-button" href="contact.html">Contact the Organizing Team</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <h3>Arena LPU</h3>
+          <p>LPU's student tech community for building, learning, and innovating together.</p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <a href="events.html">Events</a>
+          <a href="gallery.html">Gallery</a>
+          <a href="contact.html">Contact</a>
+        </div>
+        <div>
+          <h4>Connect</h4>
+          <a href="#">Instagram</a>
+          <a href="#">LinkedIn</a>
+          <a href="#">GitHub</a>
+        </div>
+      </div>
+    </footer>
+
+    <div class="modal-backdrop hidden" id="registrationModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Hackathon Registration</p>
+            <h2 id="stepTitle">Group Head Details</h2>
+            <p id="selectedEventLabel" class="modal-subtitle">Selected event: HackLPU 3.0</p>
+          </div>
+          <button class="secondary-button small" id="closeModal" type="button">Close</button>
+        </div>
+
+        <div class="progress-block">
+          <div class="progress-meta">
+            <span id="progressLabel">Step 1 of 4</span>
+            <span id="progressText">Group Head Details</span>
+          </div>
+          <div class="progress-bar">
+            <span id="progressFill" class="progress-fill"></span>
+          </div>
+        </div>
+
+        <div class="message-box hidden" id="formMessage"></div>
+
+        <div class="form-step active" data-step="1">
+          <div class="form-grid">
+            <label>
+              <span>Team Name</span>
+              <input type="text" id="teamName" />
+            </label>
+            <label>
+              <span>College / University</span>
+              <input type="text" id="collegeName" value="Lovely Professional University" />
+            </label>
+            <label>
+              <span>Group Head Full Name</span>
+              <input type="text" id="headName" />
+            </label>
+            <label>
+              <span>Unique Email ID of Head</span>
+              <input type="email" id="headEmail" />
+            </label>
+            <label>
+              <span>Phone Number</span>
+              <input type="text" id="headPhone" />
+            </label>
+            <label>
+              <span>Course / Year</span>
+              <input type="text" id="headCourseYear" />
+            </label>
+          </div>
+        </div>
+
+        <div class="form-step" data-step="2" hidden>
+          <p class="body-copy">Select the total number of members in the group, including the head.</p>
+          <div class="team-size-grid">
+            <button type="button" class="team-size-button active" data-size="1">1</button>
+            <button type="button" class="team-size-button" data-size="2">2</button>
+            <button type="button" class="team-size-button" data-size="3">3</button>
+            <button type="button" class="team-size-button" data-size="4">4</button>
+          </div>
+          <p class="helper-text" id="teamSizeNote">You selected 1 member, so the next step will go directly to review.</p>
+        </div>
+
+        <div class="form-step" data-step="3" hidden>
+          <div id="memberFields"></div>
+        </div>
+
+        <div class="form-step" data-step="4" hidden>
+          <div class="review-panel" id="reviewPanel"></div>
+          <div class="payment-panel">
+            <p class="eyebrow">Confirmation</p>
+            <span class="tag" id="registrationModeBadge">Paid registration</span>
+            <h3 id="paymentTitle">Rs. 399 per team</h3>
+            <p id="paymentDescription">Team fee is charged once. Registration is confirmed after successful payment.</p>
+            <div class="upi-qr-panel hidden" id="upiQrPanel">
+              <img id="upiQrImage" class="upi-qr-image" alt="UPI payment QR code" />
+              <p class="helper-text" id="upiQrStatus">Scan this UPI QR and keep this screen open while we verify the payment.</p>
+            </div>
+            <button class="primary-button full-width" id="payNowButton" type="button">Generate UPI QR</button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-button small hidden" id="backButton" type="button">Back</button>
+          <button class="primary-button small" id="nextButton" type="button">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arena LPU | Gallery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="gallery">
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">&lt;/&gt;</span>
+          <span>
+            <span class="brand-top">Arena Community</span>
+            <span class="brand-name">Arena LPU</span>
+          </span>
+        </a>
+        <nav class="desktop-nav">
+          <a href="index.html">Home</a>
+          <a href="events.html">Events</a>
+          <a href="gallery.html">Gallery</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle type="button">Light Mode</button>
+          <button class="menu-toggle" id="menuToggle" type="button" aria-controls="mobileNav" aria-expanded="false">Menu</button>
+        </div>
+      </div>
+      <div class="mobile-nav" id="mobileNav">
+        <a href="index.html">Home</a>
+        <a href="events.html">Events</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="contact.html">Contact</a>
+      </div>
+    </header>
+
+    <main class="page-main">
+      <section class="section page-hero">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Gallery</p>
+            <h1 class="page-title">Moments from club events, workshops, and hackathons.</h1>
+            <p>Highlights from Arena events, workshops, and community sessions.</p>
+          </div>
+
+          <div class="gallery-grid">
+            <button class="gallery-card gallery-theme-1" type="button" data-image-title="Hackathon Coding Zone" data-image-caption="HackLPU 2.0 teams coding through the night.">
+              <span>Hackathon Coding Zone</span>
+            </button>
+            <button class="gallery-card gallery-theme-2" type="button" data-image-title="Workshop Session" data-image-caption="Web dev workshop with students learning React and frontend basics.">
+              <span>Workshop Session</span>
+            </button>
+            <button class="gallery-card gallery-theme-3" type="button" data-image-title="Winners Celebration" data-image-caption="Top teams celebrating after demo day and results.">
+              <span>Winners Celebration</span>
+            </button>
+            <button class="gallery-card gallery-theme-4" type="button" data-image-title="Tech Talk" data-image-caption="Industry guest speaker sharing ideas on AI and product thinking.">
+              <span>Tech Talk</span>
+            </button>
+            <button class="gallery-card gallery-theme-5" type="button" data-image-title="Project Showcase" data-image-caption="Students demonstrating projects and networking with peers.">
+              <span>Project Showcase</span>
+            </button>
+            <button class="gallery-card gallery-theme-6" type="button" data-image-title="Robotics Expo" data-image-caption="IoT and robotics exhibition at the student tech showcase.">
+              <span>Robotics Expo</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <h3>Arena LPU</h3>
+          <p>LPU's student tech community for building, learning, and innovating together.</p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <a href="index.html">Home</a>
+          <a href="events.html">Events</a>
+          <a href="contact.html">Contact</a>
+        </div>
+        <div>
+          <h4>Connect</h4>
+          <a href="#">Instagram</a>
+          <a href="#">LinkedIn</a>
+          <a href="#">GitHub</a>
+        </div>
+      </div>
+    </footer>
+
+    <div class="lightbox hidden" id="galleryLightbox">
+      <div class="lightbox-card">
+        <button class="secondary-button small" id="closeLightbox" type="button">Close</button>
+        <div class="lightbox-image" id="lightboxImage"></div>
+        <h2 id="lightboxTitle"></h2>
+        <p id="lightboxCaption"></p>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
