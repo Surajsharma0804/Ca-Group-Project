@@ -27,6 +27,7 @@
           <a href="index.html">Home</a>
           <a href="events.html">Events</a>
           <a href="gallery.html">Gallery</a>
+          <a href="volunteer.html">Volunteer</a>
           <a href="contact.html">Contact</a>
         </nav>
         <div class="header-actions">
@@ -39,12 +40,19 @@
         <a href="index.html">Home</a>
         <a href="events.html">Events</a>
         <a href="gallery.html">Gallery</a>
+        <a href="volunteer.html">Volunteer</a>
         <a href="contact.html">Contact</a>
       </div>
     </header>
 
     <main>
-      <section class="hero-section hero-simple">
+      <section class="hero-section hero-simple hero-with-gallery">
+        <div class="hero-gallery-background" id="heroGalleryBackground" aria-hidden="true">
+          <div class="hero-gallery-slide hero-gallery-theme-1 active"></div>
+          <div class="hero-gallery-slide hero-gallery-theme-2"></div>
+          <div class="hero-gallery-slide hero-gallery-theme-3"></div>
+          <div class="hero-gallery-slide hero-gallery-theme-4"></div>
+        </div>
         <div class="hero-overlay"></div>
         <div class="container hero-content">
           <p class="eyebrow">Arena LPU presents</p>
@@ -222,54 +230,6 @@
         </div>
       </section>
 
-      <section class="section alt-section hidden" id="volunteerSection">
-        <div class="container">
-          <div class="section-heading">
-            <p class="eyebrow">Volunteer With Arena</p>
-            <h2>Apply for volunteer roles when vacancies open.</h2>
-            <p id="volunteerIntro">Share your details and interests. If a relevant volunteer vacancy is available, the organizing team will contact you.</p>
-          </div>
-
-          <div class="volunteer-shell">
-            <div class="volunteer-meta">
-              <span class="tag" id="volunteerBadge">Open Application Pool</span>
-              <p class="body-copy" id="volunteerNote">This form is for future volunteer opportunities across events, operations, design, and outreach.</p>
-            </div>
-
-            <form class="contact-form volunteer-form" id="volunteerForm">
-              <label>
-                <span>Full Name</span>
-                <input type="text" id="volunteerName" autocomplete="name" required />
-              </label>
-              <label>
-                <span>Email</span>
-                <input type="email" id="volunteerEmail" autocomplete="email" required />
-              </label>
-              <label>
-                <span>Phone Number</span>
-                <input type="text" id="volunteerPhone" autocomplete="tel" required />
-              </label>
-              <label>
-                <span>Preferred Area</span>
-                <select id="volunteerArea" required>
-                  <option value="">Select one</option>
-                  <option value="Event Operations">Event Operations</option>
-                  <option value="Design & Media">Design & Media</option>
-                  <option value="Technical Support">Technical Support</option>
-                  <option value="Outreach & PR">Outreach & PR</option>
-                </select>
-              </label>
-              <label class="full-span">
-                <span>Why do you want to volunteer?</span>
-                <textarea id="volunteerMessage" rows="4" required></textarea>
-              </label>
-              <button class="primary-button full-width" id="volunteerSubmitButton" type="submit">Submit Volunteer Application</button>
-              <p class="helper-text" id="volunteerSuccess"></p>
-            </form>
-          </div>
-        </div>
-      </section>
-
       <section class="section">
         <div class="container">
           <div class="cta-panel">
@@ -295,6 +255,7 @@
           <h4>Quick Links</h4>
           <a href="events.html">Events</a>
           <a href="gallery.html">Gallery</a>
+          <a href="volunteer.html">Volunteer</a>
           <a href="contact.html">Contact</a>
         </div>
         <div>

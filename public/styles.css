@@ -259,6 +259,43 @@ button:disabled {
   border-bottom: 1px solid var(--border);
 }
 
+.hero-gallery-background {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-gallery-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 1s ease, transform 6s ease;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hero-gallery-slide.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.hero-gallery-theme-1 {
+  background-image: url("https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1800&q=80");
+}
+
+.hero-gallery-theme-2 {
+  background-image: url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1800&q=80");
+}
+
+.hero-gallery-theme-3 {
+  background-image: url("https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=80");
+}
+
+.hero-gallery-theme-4 {
+  background-image: url("https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1800&q=80");
+}
+
 .hero-overlay {
   position: absolute;
   inset: 0;
@@ -268,10 +305,24 @@ button:disabled {
     radial-gradient(circle at bottom right, var(--hero-glow-secondary), transparent 24%);
 }
 
+.hero-with-gallery .hero-overlay {
+  background:
+    linear-gradient(180deg, rgba(8, 14, 27, 0.28), rgba(8, 14, 27, 0.56)),
+    linear-gradient(120deg, rgba(8, 14, 27, 0.42), transparent 46%),
+    radial-gradient(circle at bottom right, var(--hero-glow-secondary), transparent 24%);
+}
+
 body[data-theme="light"] .hero-overlay {
   background:
     linear-gradient(180deg, rgba(255, 250, 244, 0.16), rgba(237, 228, 214, 0.42)),
     linear-gradient(120deg, var(--hero-glow), transparent 42%),
+    radial-gradient(circle at bottom right, var(--hero-glow-secondary), transparent 24%);
+}
+
+body[data-theme="light"] .hero-with-gallery .hero-overlay {
+  background:
+    linear-gradient(180deg, rgba(255, 250, 244, 0.18), rgba(237, 228, 214, 0.4)),
+    linear-gradient(120deg, rgba(255, 250, 244, 0.2), transparent 44%),
     radial-gradient(circle at bottom right, var(--hero-glow-secondary), transparent 24%);
 }
 

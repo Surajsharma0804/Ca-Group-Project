@@ -33,6 +33,30 @@ const eventCatalog = {
   },
 };
 
+function getDefaultEventConfig(eventTitle) {
+  const normalizedTitle = String(eventTitle || "HackLPU 3.0").trim();
+  return eventCatalog[normalizedTitle] || eventCatalog["HackLPU 3.0"];
+}
+
+function parseEventConfig(trigger, fallbackTitle = "HackLPU 3.0") {
+  const fallback = getDefaultEventConfig(trigger?.dataset?.eventTitle || fallbackTitle);
+  const fee = Number(trigger?.dataset?.eventFee);
+  const teamMin = Number(trigger?.dataset?.teamMin);
+  const teamMax = Number(trigger?.dataset?.teamMax);
+
+  return {
+    fee: Number.isFinite(fee) ? fee : fallback.fee,
+    mode: trigger?.dataset?.eventMode || fallback.mode,
+    category: trigger?.dataset?.eventCategory || fallback.category,
+    teamSize: {
+      min: Number.isFinite(teamMin) ? teamMin : fallback.teamSize.min,
+      max: Number.isFinite(teamMax) ? teamMax : fallback.teamSize.max,
+    },
+    cta: trigger?.dataset?.eventCta || fallback.cta,
+    successMessage: trigger?.dataset?.successMessage || fallback.successMessage,
+  };
+}
+
 const menuToggle = document.getElementById("menuToggle");
 const mobileNav = document.getElementById("mobileNav");
 const bodyPage = document.body.dataset.page;
@@ -103,6 +127,7 @@ document.querySelectorAll(".desktop-nav a, .mobile-nav a").forEach(function (lin
     (bodyPage === "home" && href === "index.html") ||
     (bodyPage === "events" && href === "events.html") ||
     (bodyPage === "gallery" && href === "gallery.html") ||
+    (bodyPage === "volunteer" && href === "volunteer.html") ||
     (bodyPage === "contact" && href === "contact.html")
   ) {
     link.classList.add("active");
@@ -526,7 +551,7 @@ function setupDynamicHomepage() {
                 </div>
               `
               : "";
-            const registerButtonMarkup = item.registerEnabled && eventCatalog[item.title]
+            const registerButtonMarkup = item.registerEnabled
               ? `<a class="link-button" href="events.html">Register</a>`
               : "";
 
@@ -843,6 +868,36 @@ function setupHomeMomentsSlideshow() {
   startAutoplay();
 }
 
+function setupHeroTopGallerySlideshow() {
+  if (bodyPage !== "home") {
+    return;
+  }
+
+  const heroBackground = document.getElementById("heroGalleryBackground");
+  if (!heroBackground) {
+    return;
+  }
+
+  const slides = Array.from(heroBackground.querySelectorAll(".hero-gallery-slide"));
+  if (!slides.length) {
+    return;
+  }
+
+  let currentIndex = 0;
+
+  function setActive(index) {
+    currentIndex = (index + slides.length) % slides.length;
+    slides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("active", slideIndex === currentIndex);
+    });
+  }
+
+  setActive(0);
+  window.setInterval(function () {
+    setActive(currentIndex + 1);
+  }, 3600);
+}
+
 function setupRegistrationFlow() {
   const modal = document.getElementById("registrationModal");
   const closeModal = document.getElementById("closeModal");
@@ -874,7 +929,8 @@ function setupRegistrationFlow() {
   let currentStep = 1;
   let teamSize = 1;
   let selectedEvent = "HackLPU 3.0";
-  let selectedEventConfig = eventCatalog[selectedEvent];
+  let selectedEventConfig = getDefaultEventConfig(selectedEvent);
+  let activeEventConfig = selectedEventConfig;
   let paymentStatusPoll = null;
   let currentPaymentSessionId = "";
 
@@ -973,16 +1029,18 @@ function setupRegistrationFlow() {
     document.getElementById("headPhone").value = "";
     document.getElementById("headCourseYear").value = "";
     payNowButton.disabled = false;
-    selectedEventConfig = eventCatalog[selectedEvent] || eventCatalog["HackLPU 3.0"];
+    selectedEventConfig = activeEventConfig || getDefaultEventConfig(selectedEvent);
     setTeamSize(selectedEventConfig.teamSize.min);
     updatePaymentPanel();
     setStep(1);
     clearMessage();
   }
 
-  function openModal(eventTitle) {
-    selectedEvent = eventTitle || "HackLPU 3.0";
-    selectedEventConfig = eventCatalog[selectedEvent] || eventCatalog["HackLPU 3.0"];
+  function openModal(eventSource) {
+    const trigger = eventSource && eventSource.dataset ? eventSource : null;
+    selectedEvent = cleanText(trigger?.dataset?.eventTitle || eventSource || "HackLPU 3.0");
+    selectedEventConfig = trigger ? parseEventConfig(trigger, selectedEvent) : getDefaultEventConfig(selectedEvent);
+    activeEventConfig = selectedEventConfig;
     selectedEventLabel.textContent = `Selected event: ${selectedEvent}`;
     updatePaymentPanel();
     setTeamSize(selectedEventConfig.teamSize.min);
@@ -1150,22 +1208,22 @@ function setupRegistrationFlow() {
     reviewPanel.innerHTML = `
       <div class="review-block">
         <h3>Event Summary</h3>
-        <p><strong>Event:</strong> ${data.eventTitle}</p>
-        <p><strong>Format:</strong> ${selectedEventConfig.category}</p>
-        <p><strong>Team Name:</strong> ${data.teamName}</p>
-        <p><strong>College:</strong> ${data.collegeName}</p>
-        <p><strong>Team Size:</strong> ${data.teamSize}</p>
+        <p><strong>Event:</strong> ${escapeHtml(data.eventTitle)}</p>
+        <p><strong>Format:</strong> ${escapeHtml(selectedEventConfig.category)}</p>
+        <p><strong>Team Name:</strong> ${escapeHtml(data.teamName)}</p>
+        <p><strong>College:</strong> ${escapeHtml(data.collegeName)}</p>
+        <p><strong>Team Size:</strong> ${escapeHtml(data.teamSize)}</p>
       </div>
       ${participants
         .map(function (participant, index) {
           const title = index === 0 ? "Group Head" : `Member ${index + 1}`;
           return `
             <div class="review-block">
-              <h3>${title}</h3>
-              <p>${participant.name}</p>
-              <p>${participant.email}</p>
-              <p>${participant.phone}</p>
-              <p>${participant.courseYear}</p>
+              <h3>${escapeHtml(title)}</h3>
+              <p>${escapeHtml(participant.name)}</p>
+              <p>${escapeHtml(participant.email)}</p>
+              <p>${escapeHtml(participant.phone)}</p>
+              <p>${escapeHtml(participant.courseYear)}</p>
             </div>
           `;
         })
@@ -1360,7 +1418,7 @@ function setupRegistrationFlow() {
     if (!trigger) {
       return;
     }
-    openModal(trigger.dataset.eventTitle || "HackLPU 3.0");
+    openModal(trigger);
   });
 
   closeModal.addEventListener("click", closeRegistrationModal);
@@ -1395,6 +1453,7 @@ setupThemeToggle();
 setupMobileNavigation();
 setupDynamicHomepage();
 setupDynamicContactPage();
+setupHeroTopGallerySlideshow();
 setupHomeMomentsSlideshow();
 setupAutomaticEventSections();
 setupEventFilters();

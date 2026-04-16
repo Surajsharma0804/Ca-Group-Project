@@ -426,45 +426,53 @@ function validateRegistrationPayload(payload, { requirePaidEvent = false } = {})
 }
 
 async function ensureDataFile(filePath) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-
-  try {
-    await fs.access(filePath);
-  } catch {
-    await fs.writeFile(filePath, "[]", "utf8");
-  }
+  await ensureJsonFile(filePath, [], Array.isArray);
 }
 
-async function ensureJsonFile(filePath, initialValue) {
+async function ensureJsonFile(filePath, initialValue, isValid = () => true) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   try {
-    await fs.access(filePath);
+    const raw = await fs.readFile(filePath, "utf8");
+    const parsed = JSON.parse(raw);
+
+    if (!isValid(parsed)) {
+      throw new Error("Invalid JSON structure.");
+    }
   } catch {
     await fs.writeFile(filePath, JSON.stringify(initialValue, null, 2), "utf8");
   }
 }
 
+async function readJsonFile(filePath, fallbackValue) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8"));
+  } catch {
+    return fallbackValue;
+  }
+}
+
 async function readSiteContent() {
-  await ensureJsonFile(siteContentFile, defaultSiteContent);
-  const raw = JSON.parse(await fs.readFile(siteContentFile, "utf8"));
+  await ensureJsonFile(siteContentFile, defaultSiteContent, (value) => value && typeof value === "object" && !Array.isArray(value));
+  const raw = await readJsonFile(siteContentFile, defaultSiteContent);
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : defaultSiteContent;
 
   return {
     ...defaultSiteContent,
-    ...raw,
-    highlights: Array.isArray(raw.highlights) ? raw.highlights : defaultSiteContent.highlights,
-    upcomingEvents: Array.isArray(raw.upcomingEvents) ? raw.upcomingEvents : defaultSiteContent.upcomingEvents,
-    testimonials: Array.isArray(raw.testimonials) ? raw.testimonials : defaultSiteContent.testimonials,
-    faqs: Array.isArray(raw.faqs) ? raw.faqs : defaultSiteContent.faqs,
+    ...source,
+    highlights: Array.isArray(source.highlights) ? source.highlights : defaultSiteContent.highlights,
+    upcomingEvents: Array.isArray(source.upcomingEvents) ? source.upcomingEvents : defaultSiteContent.upcomingEvents,
+    testimonials: Array.isArray(source.testimonials) ? source.testimonials : defaultSiteContent.testimonials,
+    faqs: Array.isArray(source.faqs) ? source.faqs : defaultSiteContent.faqs,
     contact: {
       ...defaultSiteContent.contact,
-      ...(raw.contact || {}),
-      channels: Array.isArray(raw.contact?.channels) ? raw.contact.channels : defaultSiteContent.contact.channels,
-      teamMembers: Array.isArray(raw.contact?.teamMembers) ? raw.contact.teamMembers : defaultSiteContent.contact.teamMembers,
+      ...(source.contact || {}),
+      channels: Array.isArray(source.contact?.channels) ? source.contact.channels : defaultSiteContent.contact.channels,
+      teamMembers: Array.isArray(source.contact?.teamMembers) ? source.contact.teamMembers : defaultSiteContent.contact.teamMembers,
     },
     volunteer: {
       ...defaultSiteContent.volunteer,
-      ...(raw.volunteer || {}),
+      ...(source.volunteer || {}),
     },
   };
 }
@@ -472,7 +480,10 @@ async function readSiteContent() {
 async function appendRecord(filePath, record) {
   await withFileLock(filePath, async () => {
     await ensureDataFile(filePath);
-    const existing = JSON.parse(await fs.readFile(filePath, "utf8"));
+    const existing = await readJsonFile(filePath, []);
+    if (!Array.isArray(existing)) {
+      return;
+    }
     existing.push(record);
     await fs.writeFile(filePath, JSON.stringify(existing, null, 2), "utf8");
   });
@@ -480,7 +491,8 @@ async function appendRecord(filePath, record) {
 
 async function readRecords(filePath) {
   await ensureDataFile(filePath);
-  return JSON.parse(await fs.readFile(filePath, "utf8"));
+  const records = await readJsonFile(filePath, []);
+  return Array.isArray(records) ? records : [];
 }
 
 async function writeRecords(filePath, records) {
@@ -498,7 +510,10 @@ async function findPaymentSession(sessionId) {
 async function updatePaymentSession(sessionId, updater) {
   return withFileLock(paymentSessionsFile, async () => {
     await ensureDataFile(paymentSessionsFile);
-    const sessions = JSON.parse(await fs.readFile(paymentSessionsFile, "utf8"));
+    const sessions = await readJsonFile(paymentSessionsFile, []);
+    if (!Array.isArray(sessions)) {
+      return null;
+    }
     const index = sessions.findIndex((session) => session.id === sessionId);
 
     if (index === -1) {
@@ -519,7 +534,10 @@ async function createPaymentSession(session) {
 async function finalizePaidRegistration(session, paymentId) {
   return withFileLock(registrationsFile, async () => {
     await ensureDataFile(registrationsFile);
-    const registrations = JSON.parse(await fs.readFile(registrationsFile, "utf8"));
+    const registrations = await readJsonFile(registrationsFile, []);
+    if (!Array.isArray(registrations)) {
+      return null;
+    }
     const existing = registrations.find((registration) => registration.paymentSessionId === session.id);
 
     if (existing) {

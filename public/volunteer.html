@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Arena LPU | Gallery</title>
+    <title>Arena LPU | Volunteer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -12,7 +12,7 @@
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body data-page="gallery">
+  <body data-page="volunteer">
     <header class="site-header">
       <div class="container nav-wrap">
         <a class="brand" href="index.html">
@@ -22,6 +22,7 @@
             <span class="brand-name">Arena LPU</span>
           </span>
         </a>
+
         <nav class="desktop-nav">
           <a href="index.html">Home</a>
           <a href="events.html">Events</a>
@@ -34,6 +35,7 @@
           <button class="menu-toggle" id="menuToggle" type="button" aria-controls="mobileNav" aria-expanded="false">Menu</button>
         </div>
       </div>
+
       <div class="mobile-nav" id="mobileNav">
         <a href="index.html">Home</a>
         <a href="events.html">Events</a>
@@ -47,18 +49,47 @@
       <section class="section page-hero">
         <div class="container">
           <div class="section-heading">
-            <p class="eyebrow">Gallery</p>
-            <h1 class="page-title">Moments from club events, workshops, and hackathons.</h1>
-            <p>Click any photo to view it in detail.</p>
+            <p class="eyebrow">Volunteer</p>
+            <h1 class="page-title">Apply to volunteer with Arena LPU.</h1>
+            <p id="volunteerIntro">Share your details and interests. If a relevant volunteer vacancy is available, the organizing team will contact you.</p>
           </div>
 
-          <div class="gallery-grid">
-            <button class="gallery-card gallery-theme-1" type="button" aria-label="Open Hackathon Coding Zone photo" data-image-title="Hackathon Coding Zone" data-image-caption="HackLPU 2.0 teams coding through the night."></button>
-            <button class="gallery-card gallery-theme-2" type="button" aria-label="Open Workshop Session photo" data-image-title="Workshop Session" data-image-caption="Web dev workshop with students learning React and frontend basics."></button>
-            <button class="gallery-card gallery-theme-3" type="button" aria-label="Open Winners Celebration photo" data-image-title="Winners Celebration" data-image-caption="Top teams celebrating after demo day and results."></button>
-            <button class="gallery-card gallery-theme-4" type="button" aria-label="Open Tech Talk photo" data-image-title="Tech Talk" data-image-caption="Industry guest speaker sharing ideas on AI and product thinking."></button>
-            <button class="gallery-card gallery-theme-5" type="button" aria-label="Open Project Showcase photo" data-image-title="Project Showcase" data-image-caption="Students demonstrating projects and networking with peers."></button>
-            <button class="gallery-card gallery-theme-6" type="button" aria-label="Open Robotics Expo photo" data-image-title="Robotics Expo" data-image-caption="IoT and robotics exhibition at the student tech showcase."></button>
+          <div class="volunteer-shell">
+            <div class="volunteer-meta">
+              <span class="tag" id="volunteerBadge">Open Application Pool</span>
+              <p class="body-copy" id="volunteerNote">This form is for future volunteer opportunities across events, operations, design, and outreach.</p>
+            </div>
+
+            <form class="contact-form volunteer-form" id="volunteerForm">
+              <label>
+                <span>Full Name</span>
+                <input type="text" id="volunteerName" autocomplete="name" required />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" id="volunteerEmail" autocomplete="email" required />
+              </label>
+              <label>
+                <span>Phone Number</span>
+                <input type="text" id="volunteerPhone" autocomplete="tel" required />
+              </label>
+              <label>
+                <span>Preferred Area</span>
+                <select id="volunteerArea" required>
+                  <option value="">Select one</option>
+                  <option value="Event Operations">Event Operations</option>
+                  <option value="Design & Media">Design & Media</option>
+                  <option value="Technical Support">Technical Support</option>
+                  <option value="Outreach & PR">Outreach & PR</option>
+                </select>
+              </label>
+              <label class="full-span">
+                <span>Why do you want to volunteer?</span>
+                <textarea id="volunteerMessage" rows="4" required></textarea>
+              </label>
+              <button class="primary-button full-width" id="volunteerSubmitButton" type="submit">Submit Volunteer Application</button>
+              <p class="helper-text" id="volunteerSuccess"></p>
+            </form>
           </div>
         </div>
       </section>
@@ -74,7 +105,7 @@
           <h4>Quick Links</h4>
           <a href="index.html">Home</a>
           <a href="events.html">Events</a>
-          <a href="volunteer.html">Volunteer</a>
+          <a href="gallery.html">Gallery</a>
           <a href="contact.html">Contact</a>
         </div>
         <div>
@@ -85,15 +116,6 @@
         </div>
       </div>
     </footer>
-
-    <div class="lightbox hidden" id="galleryLightbox">
-      <div class="lightbox-card">
-        <button class="secondary-button small" id="closeLightbox" type="button">Close</button>
-        <div class="lightbox-image" id="lightboxImage"></div>
-        <h2 id="lightboxTitle"></h2>
-        <p id="lightboxCaption"></p>
-      </div>
-    </div>
 
     <script src="script.js"></script>
   </body>
