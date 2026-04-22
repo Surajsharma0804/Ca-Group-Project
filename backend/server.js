@@ -49,12 +49,30 @@ function loadEnvFile(filePath) {
 
 loadEnvFile(envFile);
 
+function parseBooleanEnv(value, defaultValue = false) {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "n", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
+}
+
 const config = {
   port: Number(process.env.PORT || 3001),
   nodeEnv: process.env.NODE_ENV || "development",
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
   razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+  demoPaymentMode: parseBooleanEnv(process.env.DEMO_PAYMENT_MODE, process.env.NODE_ENV !== "production"),
   allowedOrigins: String(process.env.ALLOWED_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
@@ -259,6 +277,7 @@ const razorpay =
         key_secret: config.razorpayKeySecret,
       })
     : null;
+const isDemoPaymentMode = !razorpay && config.demoPaymentMode;
 
 const fileLocks = new Map();
 
@@ -330,6 +349,35 @@ function isEmail(value) {
 
 function isPhone(value) {
   return /^[0-9+\-\s()]{8,20}$/.test(value);
+}
+
+function escapeXml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildDemoQrImageUrl({ eventTitle, amount, sessionId }) {
+  const safeTitle = escapeXml(eventTitle);
+  const safeAmount = escapeXml(String(amount));
+  const safeToken = escapeXml(sessionId.slice(0, 8).toUpperCase());
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360">
+  <rect width="360" height="360" fill="#ffffff"/>
+  <rect x="18" y="18" width="324" height="324" rx="14" fill="#f7f7f7" stroke="#111111" stroke-width="4"/>
+  <rect x="40" y="40" width="280" height="200" fill="#111111"/>
+  <text x="180" y="90" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="700">DEMO QR</text>
+  <text x="180" y="128" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">${safeTitle}</text>
+  <text x="180" y="154" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">Amount: Rs. ${safeAmount}</text>
+  <text x="180" y="182" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="12">Session ${safeToken}</text>
+  <text x="180" y="270" text-anchor="middle" fill="#111111" font-family="Arial, sans-serif" font-size="14" font-weight="700">Presentation Mode</text>
+  <text x="180" y="294" text-anchor="middle" fill="#444444" font-family="Arial, sans-serif" font-size="12">Auto-confirms in a few seconds.</text>
+</svg>`;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 function getEventDetails(eventTitle) {
@@ -599,6 +647,7 @@ app.get("/api/health", (_request, response) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     razorpayConfigured: Boolean(razorpay),
+    demoPaymentMode: isDemoPaymentMode,
     events: Object.entries(eventCatalog).map(([title, event]) => ({
       title,
       fee: event.fee,
@@ -748,7 +797,7 @@ app.post("/api/register-free", async (request, response) => {
 
 app.post("/api/create-upi-session", async (request, response) => {
   try {
-    if (!razorpay) {
+    if (!razorpay && !isDemoPaymentMode) {
       response.status(500).json({
         message: "Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET before taking payments.",
       });
@@ -764,6 +813,41 @@ app.post("/api/create-upi-session", async (request, response) => {
     const amount = validation.data.event.fee;
     const sessionId = crypto.randomUUID();
     const closeBy = Math.floor(Date.now() / 1000) + 15 * 60;
+
+    if (isDemoPaymentMode) {
+      const qrCodeId = `demo_qr_${sessionId}`;
+      const qrCodeImageUrl = buildDemoQrImageUrl({
+        eventTitle: validation.data.eventTitle,
+        amount,
+        sessionId,
+      });
+
+      await createPaymentSession({
+        id: sessionId,
+        status: "pending",
+        kind: "demo_upi_qr",
+        qrCodeId,
+        qrCodeImageUrl,
+        amount,
+        closeBy,
+        createdAt: new Date().toISOString(),
+        demoAutoConfirmAt: Date.now() + 9000,
+        ...validation.data,
+      });
+
+      response.json({
+        sessionId,
+        qrCodeId,
+        qrCodeImageUrl,
+        amount: Math.round(amount * 100),
+        amountDisplay: amount,
+        currency: validation.data.event.currency,
+        expiresAt: new Date(closeBy * 1000).toISOString(),
+        mode: "demo",
+      });
+      return;
+    }
+
     const qrCode = await razorpay.qrCode.create({
       type: "upi_qr",
       usage: "single_use",
@@ -810,7 +894,7 @@ app.post("/api/create-upi-session", async (request, response) => {
 
 app.get("/api/payment-status/:sessionId", async (request, response) => {
   try {
-    if (!razorpay) {
+    if (!razorpay && !isDemoPaymentMode) {
       response.status(500).json({ message: "Payment verification is not configured." });
       return;
     }
@@ -824,6 +908,69 @@ app.get("/api/payment-status/:sessionId", async (request, response) => {
     const session = await findPaymentSession(sessionId);
     if (!session) {
       response.status(404).json({ message: "Payment session not found." });
+      return;
+    }
+
+    if (isDemoPaymentMode) {
+      if (session.status === "paid") {
+        response.json({
+          success: true,
+          status: "paid",
+          registrationId: session.registrationId,
+        });
+        return;
+      }
+
+      if (session.status === "expired" || session.status === "cancelled") {
+        response.json({
+          success: false,
+          status: "expired",
+          message: "This UPI QR has expired. Generate a fresh QR to continue.",
+        });
+        return;
+      }
+
+      if (session.closeBy && Date.now() > session.closeBy * 1000) {
+        await updatePaymentSession(sessionId, (current) => ({
+          ...current,
+          status: "expired",
+          expiredAt: new Date().toISOString(),
+        }));
+
+        response.json({
+          success: false,
+          status: "expired",
+          message: "This UPI QR has expired. Generate a fresh QR to continue.",
+        });
+        return;
+      }
+
+      if (session.demoAutoConfirmAt && Date.now() >= Number(session.demoAutoConfirmAt)) {
+        const paymentId = `demo_pay_${session.id.slice(0, 12)}`;
+        const record = await finalizePaidRegistration(session, paymentId);
+
+        await updatePaymentSession(sessionId, (current) => ({
+          ...current,
+          status: "paid",
+          paymentId,
+          registrationId: record?.id,
+          paidAt: new Date().toISOString(),
+        }));
+
+        response.json({
+          success: true,
+          status: "paid",
+          registrationId: record?.id,
+        });
+        return;
+      }
+
+      response.json({
+        success: false,
+        status: "pending",
+        amountDisplay: session.amount,
+        expiresAt: new Date(session.closeBy * 1000).toISOString(),
+      });
       return;
     }
 
@@ -906,7 +1053,7 @@ app.get("/api/payment-status/:sessionId", async (request, response) => {
 
 app.post("/api/payment-session/:sessionId/cancel", async (request, response) => {
   try {
-    if (!razorpay) {
+    if (!razorpay && !isDemoPaymentMode) {
       response.status(500).json({ message: "Payment cancellation is not configured." });
       return;
     }
@@ -921,6 +1068,17 @@ app.post("/api/payment-session/:sessionId/cancel", async (request, response) => 
 
     if (session.status === "paid") {
       response.status(400).json({ message: "A completed payment session cannot be cancelled." });
+      return;
+    }
+
+    if (isDemoPaymentMode) {
+      await updatePaymentSession(sessionId, (current) => ({
+        ...current,
+        status: "cancelled",
+        cancelledAt: new Date().toISOString(),
+      }));
+
+      response.json({ success: true, status: "cancelled" });
       return;
     }
 

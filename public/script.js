@@ -211,8 +211,12 @@ function setupAutomaticEventSections() {
   function applyPastStyles(card, isPast) {
     card.classList.toggle("muted-card", isPast);
     const tag = card.querySelector(".tag");
+    const actions = card.querySelector(".card-actions");
     if (tag) {
       tag.classList.toggle("muted-tag", isPast);
+    }
+    if (actions) {
+      actions.classList.toggle("hidden", isPast);
     }
   }
 
@@ -470,6 +474,10 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function cleanText(value) {
+  return String(value || "").trim();
+}
+
 async function fetchSiteContentWithFallback() {
   const endpoints = ["/api/site-content", "http://localhost:3001/api/site-content"];
 
@@ -486,6 +494,42 @@ async function fetchSiteContentWithFallback() {
   }
 
   return null;
+}
+
+async function fetchHealthWithFallback() {
+  const endpoints = ["/api/health", "http://localhost:3001/api/health"];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint);
+      const payload = await response.json();
+      if (response.ok && payload) {
+        return payload;
+      }
+    } catch (_error) {
+      // Try next endpoint.
+    }
+  }
+
+  return null;
+}
+
+async function fetchApiWithFallback(path, options) {
+  const rawPath = String(path || "");
+  const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+  const endpoints = [`/api${normalizedPath}`, `http://localhost:3001/api${normalizedPath}`];
+
+  let lastError = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      return await fetch(endpoint, options);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Unable to reach API.");
 }
 
 function setupDynamicHomepage() {
@@ -918,6 +962,7 @@ function setupRegistrationFlow() {
   const paymentTitle = document.getElementById("paymentTitle");
   const paymentDescription = document.getElementById("paymentDescription");
   const registrationModeBadge = document.getElementById("registrationModeBadge");
+  const paymentModeNotice = document.getElementById("paymentModeNotice");
   const upiQrPanel = document.getElementById("upiQrPanel");
   const upiQrImage = document.getElementById("upiQrImage");
   const upiQrStatus = document.getElementById("upiQrStatus");
@@ -933,6 +978,7 @@ function setupRegistrationFlow() {
   let activeEventConfig = selectedEventConfig;
   let paymentStatusPoll = null;
   let currentPaymentSessionId = "";
+  let isDemoPaymentMode = false;
 
   const stepTitles = {
     1: "Group Head Details",
@@ -963,7 +1009,7 @@ function setupRegistrationFlow() {
     stopPaymentPolling();
 
     try {
-      await fetch(`/api/payment-session/${sessionId}/cancel`, {
+      await fetchApiWithFallback(`/payment-session/${sessionId}/cancel`, {
         method: "POST",
       });
     } catch (_error) {
@@ -1013,8 +1059,17 @@ function setupRegistrationFlow() {
     }
 
     if (registrationModeBadge) {
-      registrationModeBadge.textContent =
-        selectedEventConfig.mode === "paid" ? "Paid registration" : "Free registration";
+      if (selectedEventConfig.mode === "paid" && isDemoPaymentMode) {
+        registrationModeBadge.textContent = "Paid registration (Demo)";
+      } else {
+        registrationModeBadge.textContent =
+          selectedEventConfig.mode === "paid" ? "Paid registration" : "Free registration";
+      }
+    }
+
+    if (paymentModeNotice) {
+      const shouldShowNotice = selectedEventConfig.mode === "paid" && isDemoPaymentMode;
+      paymentModeNotice.classList.toggle("hidden", !shouldShowNotice);
     }
 
     payNowButton.textContent = selectedEventConfig.cta;
@@ -1237,7 +1292,7 @@ function setupRegistrationFlow() {
     }
 
     try {
-      const response = await fetch(`/api/payment-status/${currentPaymentSessionId}`);
+      const response = await fetchApiWithFallback(`/payment-status/${currentPaymentSessionId}`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -1341,7 +1396,7 @@ function setupRegistrationFlow() {
         payNowButton.disabled = true;
         payNowButton.textContent = "Confirming...";
 
-        const registerResponse = await fetch("/api/register-free", {
+        const registerResponse = await fetchApiWithFallback("/register-free", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1374,7 +1429,7 @@ function setupRegistrationFlow() {
       payNowButton.textContent = "Generating QR...";
       resetQrPanel();
 
-      const createOrderResponse = await fetch("/api/create-upi-session", {
+      const createOrderResponse = await fetchApiWithFallback("/create-upi-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1399,7 +1454,11 @@ function setupRegistrationFlow() {
       }
 
       if (upiQrStatus) {
-        upiQrStatus.textContent = `Scan this QR with any UPI app to pay Rs. ${orderData.amountDisplay}. We will confirm automatically.`;
+        if (orderData.mode === "demo" || isDemoPaymentMode) {
+          upiQrStatus.textContent = `Demo mode active. Scan simulation QR for presentation. Payment will auto-confirm in a few seconds for Rs. ${orderData.amountDisplay}.`;
+        } else {
+          upiQrStatus.textContent = `Scan this QR with any UPI app to pay Rs. ${orderData.amountDisplay}. We will confirm automatically.`;
+        }
       }
 
       payNowButton.disabled = false;
@@ -1447,6 +1506,19 @@ function setupRegistrationFlow() {
   updatePaymentPanel();
   setTeamSize(selectedEventConfig.teamSize.min);
   setStep(1);
+
+  fetchHealthWithFallback()
+    .then(function (health) {
+      if (!health || typeof health !== "object") {
+        return;
+      }
+
+      isDemoPaymentMode = Boolean(health.demoPaymentMode);
+      updatePaymentPanel();
+    })
+    .catch(function () {
+      // Keep default label when health check is unavailable.
+    });
 }
 
 setupThemeToggle();
