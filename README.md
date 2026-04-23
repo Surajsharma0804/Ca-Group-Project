@@ -7,7 +7,7 @@ A polished multi-page hackathon website with:
 - frontend: HTML, CSS, JavaScript
 - backend: Node.js, Express
 - payments: Razorpay UPI QR for paid events
-- storage: lightweight JSON persistence for registrations and contact submissions
+- storage: MongoDB for registrations/volunteers and JSON files for site content, contacts, and payment sessions
 
 ## Project structure
 
@@ -25,7 +25,8 @@ A polished multi-page hackathon website with:
 - paid and free events now use different registration flows
 - Razorpay keys move to environment variables instead of hardcoded source
 - contact form submissions save on the backend
-- successful free and paid registrations are persisted in `backend/data`
+- successful free and paid registrations are persisted in MongoDB
+- volunteer applications are persisted in MongoDB
 - paid events use single-use UPI QR sessions with server-side verification
 - event pricing and team-size rules are enforced on the server
 
@@ -33,9 +34,11 @@ A polished multi-page hackathon website with:
 
 1. Run `npm install`
 2. Copy `.env.example` to `.env`
-3. Add your Razorpay keys and allowed frontend origins
-4. Run `npm run dev`
-5. Open `http://localhost:3001`
+3. Ensure MongoDB is running locally (or provide a remote MongoDB URI)
+4. Add your MongoDB and Razorpay configuration in `.env`
+5. Set allowed frontend origins
+6. Run `npm run dev`
+7. Open `http://localhost:3001`
 
 ## Routes
 
@@ -51,5 +54,6 @@ A polished multi-page hackathon website with:
 
 - Use Razorpay test credentials first
 - Set `ALLOWED_ORIGINS` to your deployed frontend domain in production
-- Registrations and contacts are stored in local JSON files for now
-- For higher scale production, replace JSON storage with a real database and connect social links/email delivery
+- `MONGODB_URI` defaults to `mongodb://127.0.0.1:27017/hacklpu`, which works with local MongoDB and Compass
+- Registrations and volunteer applications are stored in MongoDB collections: `registrations` and `volunteers`
+- Contacts, payment sessions, and site content remain in `backend/data` JSON files

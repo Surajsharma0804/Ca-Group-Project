@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 
 import cors from "cors";
 import express from "express";
+import { MongoClient } from "mongodb";
 import Razorpay from "razorpay";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,9 +14,7 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.join(__dirname, "..");
 const publicDir = path.join(rootDir, "public");
 const dataDir = path.join(__dirname, "data");
-const registrationsFile = path.join(dataDir, "registrations.json");
 const contactsFile = path.join(dataDir, "contacts.json");
-const volunteersFile = path.join(dataDir, "volunteers.json");
 const siteContentFile = path.join(dataDir, "site-content.json");
 const paymentSessionsFile = path.join(dataDir, "payment-sessions.json");
 const envFile = path.join(rootDir, ".env");
@@ -69,6 +68,8 @@ function parseBooleanEnv(value, defaultValue = false) {
 const config = {
   port: Number(process.env.PORT || 3001),
   nodeEnv: process.env.NODE_ENV || "development",
+  mongodbUri: process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/hacklpu",
+  mongodbDatabase: process.env.MONGODB_DATABASE || "",
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
   razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
@@ -278,8 +279,56 @@ const razorpay =
       })
     : null;
 const isDemoPaymentMode = !razorpay && config.demoPaymentMode;
+let mongoClient;
+let mongoDatabase;
+let mongoConnectionPromise;
+let isMongoReady = false;
 
 const fileLocks = new Map();
+
+function resolveMongoDatabaseName() {
+  const explicitName = String(config.mongodbDatabase || "").trim();
+  if (explicitName) {
+    return explicitName;
+  }
+
+  try {
+    const parsed = new URL(config.mongodbUri);
+    const uriName = (parsed.pathname || "").replace(/^\//, "");
+    return uriName || "hacklpu";
+  } catch {
+    return "hacklpu";
+  }
+}
+
+async function getDatabase() {
+  if (mongoDatabase) {
+    return mongoDatabase;
+  }
+
+  if (!mongoConnectionPromise) {
+    mongoClient = new MongoClient(config.mongodbUri);
+    mongoConnectionPromise = mongoClient.connect().then((connectedClient) => {
+      mongoDatabase = connectedClient.db(resolveMongoDatabaseName());
+      return mongoDatabase;
+    });
+  }
+
+  return mongoConnectionPromise;
+}
+
+async function initializeMongoCollections() {
+  const database = await getDatabase();
+  await Promise.all([
+    database.collection("registrations").createIndex({ id: 1 }, { unique: true }),
+    database.collection("registrations").createIndex({ paymentSessionId: 1 }, { unique: true, sparse: true }),
+    database.collection("volunteers").createIndex({ id: 1 }, { unique: true }),
+  ]);
+}
+
+function isDuplicateKeyError(error) {
+  return Boolean(error && typeof error === "object" && "code" in error && error.code === 11000);
+}
 
 function withFileLock(filePath, operation) {
   const previous = fileLocks.get(filePath) || Promise.resolve();
@@ -579,41 +628,55 @@ async function createPaymentSession(session) {
   await appendRecord(paymentSessionsFile, session);
 }
 
+async function createRegistration(record) {
+  const database = await getDatabase();
+  await database.collection("registrations").insertOne(record);
+}
+
+async function createVolunteerApplication(record) {
+  const database = await getDatabase();
+  await database.collection("volunteers").insertOne(record);
+}
+
 async function finalizePaidRegistration(session, paymentId) {
-  return withFileLock(registrationsFile, async () => {
-    await ensureDataFile(registrationsFile);
-    const registrations = await readJsonFile(registrationsFile, []);
-    if (!Array.isArray(registrations)) {
-      return null;
-    }
-    const existing = registrations.find((registration) => registration.paymentSessionId === session.id);
+  const database = await getDatabase();
+  const collection = database.collection("registrations");
+  const existing = await collection.findOne({ paymentSessionId: session.id });
 
-    if (existing) {
-      return existing;
-    }
+  if (existing) {
+    return existing;
+  }
 
-    const record = {
-      id: crypto.randomUUID(),
-      registrationType: "paid",
-      paymentStatus: "verified",
-      paymentId,
-      paymentSessionId: session.id,
-      qrCodeId: session.qrCodeId,
-      amount: session.amount,
-      createdAt: new Date().toISOString(),
-      eventTitle: session.eventTitle,
-      event: session.event,
-      teamName: session.teamName,
-      collegeName: session.collegeName,
-      teamSize: session.teamSize,
-      head: session.head,
-      members: session.members,
-    };
+  const record = {
+    id: crypto.randomUUID(),
+    registrationType: "paid",
+    paymentStatus: "verified",
+    paymentId,
+    paymentSessionId: session.id,
+    qrCodeId: session.qrCodeId,
+    amount: session.amount,
+    createdAt: new Date().toISOString(),
+    eventTitle: session.eventTitle,
+    event: session.event,
+    teamName: session.teamName,
+    collegeName: session.collegeName,
+    teamSize: session.teamSize,
+    head: session.head,
+    members: session.members,
+  };
 
-    registrations.push(record);
-    await fs.writeFile(registrationsFile, JSON.stringify(registrations, null, 2), "utf8");
+  try {
+    await collection.insertOne(record);
     return record;
-  });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      const duplicate = await collection.findOne({ paymentSessionId: session.id });
+      if (duplicate) {
+        return duplicate;
+      }
+    }
+    throw error;
+  }
 }
 
 async function handleSuccessfulPayment({
@@ -646,6 +709,7 @@ app.get("/api/health", (_request, response) => {
   response.json({
     status: "ok",
     timestamp: new Date().toISOString(),
+    mongoConnected: isMongoReady,
     razorpayConfigured: Boolean(razorpay),
     demoPaymentMode: isDemoPaymentMode,
     events: Object.entries(eventCatalog).map(([title, event]) => ({
@@ -740,7 +804,7 @@ app.post("/api/volunteer", async (request, response) => {
       return;
     }
 
-    await appendRecord(volunteersFile, {
+    await createVolunteerApplication({
       id: crypto.randomUUID(),
       name,
       email,
@@ -782,7 +846,7 @@ app.post("/api/register-free", async (request, response) => {
       ...validation.data,
     };
 
-    await appendRecord(registrationsFile, record);
+    await createRegistration(record);
 
     response.json({
       success: true,
@@ -1166,6 +1230,19 @@ app.use((error, _request, response, next) => {
   response.status(500).json({ message: "Internal server error." });
 });
 
-app.listen(config.port, () => {
-  console.log(`HackLPU app running on http://localhost:${config.port}`);
-});
+async function startServer() {
+  try {
+    await initializeMongoCollections();
+    isMongoReady = true;
+
+    app.listen(config.port, () => {
+      console.log(`HackLPU app running on http://localhost:${config.port}`);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Unable to start server. MongoDB connection failed: ${message}`);
+    process.exit(1);
+  }
+}
+
+startServer();
