@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "hacklpu-fresh",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node backend/server.js",
+    "start:demo": "DEMO_PAYMENT_MODE=true node backend/server.js",
+    "dev": "node backend/server.js",
+    "check": "node --check backend/server.js",
+    "test": "npm run check",
+    "lint": "npm run check && node --check public/script.js",
+    "build": "npm run lint"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "mongodb": "^6.21.0",
+    "razorpay": "^2.9.6"
+  }
+}

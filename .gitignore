@@ -1,0 +1,5 @@
+server.out.log
+server.err.log
+node_modules/
+.env
+.DS_Store
