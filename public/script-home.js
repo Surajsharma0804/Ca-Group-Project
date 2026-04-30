@@ -140,6 +140,13 @@ export function setupRegistrationFlow(configProvider = {}) {
   let selectedEvent = 'HackLPU 3.0';
   let selectedEventConfig = getDefaultEventConfig(selectedEvent);
 
+  // Show demo payment notice if server reports demo mode active
+  fetchApiWithFallback('/api/health', {}, function (error, result) {
+    if (error) return;
+    const demo = result.data?.demoPaymentMode;
+    if (demo && paymentModeNotice) paymentModeNotice.classList.remove('hidden');
+  });
+
   function clearMessage() {
     if (!formMessage) return;
     formMessage.textContent = '';
@@ -523,6 +530,7 @@ export function setupRegistrationFlow(configProvider = {}) {
         const parsedConfig = parseEventConfig(card, card.dataset.eventTitle);
         updateSelectedEvent(card.dataset.eventTitle, parsedConfig);
         setStep(1);
+        modal.classList.remove('hidden');
         modal.classList.add('active');
       });
     });
@@ -537,6 +545,7 @@ export function setupRegistrationFlow(configProvider = {}) {
         const parsedConfig = parseEventConfig(button, button.dataset.eventTitle);
         updateSelectedEvent(button.dataset.eventTitle, parsedConfig);
         setStep(1);
+        modal.classList.remove('hidden');
         modal.classList.add('active');
       });
     });
