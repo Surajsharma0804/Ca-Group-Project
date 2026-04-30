@@ -15,8 +15,13 @@ A polished multi-page hackathon website with:
 - `public/events.html` events page
 - `public/gallery.html` gallery page
 - `public/contact.html` contact page
+- `public/volunteer.html` volunteer page
 - `public/styles.css` shared frontend styling
-- `public/script.js` shared frontend behavior and registration flow
+- `public/script-home.js` shared theme/nav helpers + registration flow utilities
+- `public/script-events.js` events page interactions + registration flow
+- `public/script-gallery.js` gallery page interactions
+- `public/script-contact.js` contact form behavior
+- `public/script-volunteer.js` volunteer form behavior
 - `backend/server.js` Express server, validation, registrations, and Razorpay routes
 
 ## What's improved

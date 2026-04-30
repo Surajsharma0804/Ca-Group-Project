@@ -351,6 +351,121 @@ app.post('/api/create-upi-session', async (request, response) => {
   }
 });
 
+// Compatibility routes for frontend (legacy paths expected by public scripts)
+app.post('/api/registration/upi', async (request, response) => {
+  try {
+    // Reuse the same logic as /api/create-upi-session but return keys expected by frontend
+    const payload = request.body || {};
+    const eventTitle = String(payload.eventTitle || '').trim();
+    const event = eventCatalog[eventTitle];
+    if (!event || event.mode !== 'paid') return response.status(400).json({ message: 'Selected event not payable or not found.' });
+
+    const amount = event.fee;
+    const sessionId = crypto.randomUUID();
+    const closeBy = Math.floor(Date.now() / 1000) + 15 * 60;
+
+    if (isDemoPaymentMode) {
+      const qrCodeId = `demo_qr_${sessionId}`;
+      const qrCodeImageUrl = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg"><text x="10" y="20">Demo QR ${eventTitle} Rs.${amount}</text></svg>`)}`;
+      await createPaymentSession({ id: sessionId, status: 'pending', kind: 'demo_upi_qr', qrCodeId, qrCodeImageUrl, amount, closeBy, createdAt: new Date().toISOString(), demoAutoConfirmAt: Date.now() + 9000, ...payload, eventTitle });
+      return response.json({ sessionId, qrCodeId, qrCodeUrl: qrCodeImageUrl, qrCodeImageUrl, amount: Math.round(amount * 100), amountDisplay: amount, currency: event.currency, expiresAt: new Date(closeBy * 1000).toISOString(), mode: 'demo' });
+    }
+
+    const qrCode = await razorpay.qrCode.create({ type: 'upi_qr', usage: 'single_use', fixed_amount: true, payment_amount: Math.round(amount * 100), name: `${eventTitle} Registration`, description: `${payload.teamName || ''} - ${payload.head?.email || ''}`, close_by: closeBy, notes: { paymentSessionId: sessionId, eventTitle, teamName: payload.teamName || '', headEmail: payload.head?.email || '' } });
+
+    await createPaymentSession({ id: sessionId, status: 'pending', kind: 'upi_qr', qrCodeId: qrCode.id, qrCodeImageUrl: qrCode.image_url, amount, closeBy, createdAt: new Date().toISOString(), ...payload, eventTitle });
+
+    return response.json({ sessionId, qrCodeId: qrCode.id, qrCodeUrl: qrCode.image_url, qrCodeImageUrl: qrCode.image_url, amount: Math.round(amount * 100), amountDisplay: amount, currency: event.currency, expiresAt: new Date(closeBy * 1000).toISOString() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to create UPI payment session.';
+    response.status(500).json({ message });
+  }
+});
+
+app.get('/api/registration/upi/:qrId', async (request, response) => {
+  try {
+    const qrId = String(request.params.qrId || '').trim();
+    if (!qrId) return response.status(400).json({ message: 'QR id is required.' });
+
+    // Try to find a session by qrCodeId or by session id (some flows use session id)
+    const session = runtimeStore.paymentSessions.find((s) => s.qrCodeId === qrId || s.id === qrId) || null;
+    if (!session) return response.status(404).json({ message: 'Payment session not found.' });
+
+    if (isDemoPaymentMode) {
+      if (session.status === 'paid') return response.json({ success: true, status: 'paid', registrationId: session.registrationId });
+      if (session.status === 'expired' || session.status === 'cancelled') return response.json({ success: false, status: 'expired', message: 'This UPI QR has expired. Generate a fresh QR to continue.' });
+      if (session.closeBy && Date.now() > session.closeBy * 1000) {
+        await updatePaymentSession(session.id, (current) => ({ ...current, status: 'expired', expiredAt: new Date().toISOString() }));
+        return response.json({ success: false, status: 'expired', message: 'This UPI QR has expired. Generate a fresh QR to continue.' });
+      }
+
+      if (session.demoAutoConfirmAt && Date.now() >= Number(session.demoAutoConfirmAt)) {
+        const paymentId = `demo_pay_${session.id.slice(0, 12)}`;
+        const record = await finalizePaidRegistration(session, paymentId);
+        await updatePaymentSession(session.id, (current) => ({ ...current, status: 'paid', paymentId, registrationId: record?.id, paidAt: new Date().toISOString() }));
+        return response.json({ success: true, status: 'paid', registrationId: record?.id });
+      }
+
+      return response.json({ success: false, status: 'pending', amountDisplay: session.amount, expiresAt: new Date(session.closeBy * 1000).toISOString() });
+    }
+
+    // Non-demo: check payments via Razorpay
+    const qrDetails = await razorpay.qrCode.fetch(session.qrCodeId);
+    const payments = await razorpay.qrCode.fetchAllPayments(session.qrCodeId, { count: 10 });
+    const successfulPayment = (payments.items || []).find((payment) => payment.status === 'captured' && Number(payment.amount) === Math.round(session.amount * 100));
+    if (successfulPayment) {
+      const record = await finalizePaidRegistration(session, successfulPayment.id);
+      await updatePaymentSession(session.id, (current) => ({ ...current, status: 'paid', paymentId: successfulPayment.id, registrationId: record.id, paidAt: new Date().toISOString() }));
+      try { if (qrDetails.status !== 'closed') await razorpay.qrCode.close(session.qrCodeId); } catch {}
+      return response.json({ success: true, status: 'paid', registrationId: record.id });
+    }
+
+    if (qrDetails.status === 'closed' || (session.closeBy && Date.now() > session.closeBy * 1000)) {
+      await updatePaymentSession(session.id, (current) => ({ ...current, status: 'expired', expiredAt: new Date().toISOString() }));
+      return response.json({ success: false, status: 'expired', message: 'This UPI QR has expired. Generate a fresh QR to continue.' });
+    }
+
+    return response.json({ success: false, status: 'pending', amountDisplay: session.amount, expiresAt: new Date(session.closeBy * 1000).toISOString() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to query payment status.';
+    response.status(500).json({ message });
+  }
+});
+
+// Generic registration endpoint used by frontend to complete registration for both free and paid flows
+app.post('/api/registration', async (request, response) => {
+  try {
+    const payload = request.body || {};
+    const eventTitle = String(payload.eventTitle || '').trim();
+    const event = eventCatalog[eventTitle];
+    if (!event) return response.status(400).json({ message: 'Selected event is not available.' });
+
+    // Paid flow: require sessionId and verify session is paid
+    if (event.mode === 'paid') {
+      const sessionId = String(payload.sessionId || '').trim();
+      if (!sessionId) return response.status(400).json({ message: 'Payment session ID is required for paid registrations.' });
+      const session = await findPaymentSession(sessionId);
+      if (!session || session.status !== 'paid') return response.status(400).json({ message: 'Payment not verified yet.' });
+
+      const record = await finalizePaidRegistration(session, session.paymentId || `manual_${Date.now()}`);
+      await createRegistration({ id: record.id, ...record });
+      return response.json({ success: true, message: event.successMessage || 'Registration completed successfully.', registrationId: record.id });
+    }
+
+    // Free flow: create registration immediately
+    if (event.mode === 'free') {
+      const record = { id: crypto.randomUUID(), registrationType: 'free', paymentStatus: 'not_required', createdAt: new Date().toISOString(), eventTitle, ...payload };
+      await createRegistration(record);
+      return response.json({ success: true, message: event.successMessage || 'Registration completed successfully.', registrationId: record.id });
+    }
+
+    response.status(400).json({ message: 'Unsupported registration mode.' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to complete registration.';
+    response.status(500).json({ message });
+  }
+});
+
 app.get("/api/payment-status/:sessionId", async (request, response) => {
   try {
     if (!razorpay && !isDemoPaymentMode) {
@@ -598,8 +713,9 @@ async function startServer() {
       logMongoFallbackOnce(error);
     }
 
-    app.listen(config.port, () => {
-      console.log(`HackLPU app running on http://localhost:${config.port}`);
+    app.listen(config.port, "0.0.0.0", () => {
+      const url = `http://localhost:${config.port}/`;
+      console.log(`HackLPU app running on ${url}`);
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

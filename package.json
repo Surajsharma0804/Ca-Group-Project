@@ -10,7 +10,7 @@
     "dev": "node backend/server.js",
     "check": "node --check backend/server.js",
     "test": "npm run check",
-    "lint": "npm run check && node --check public/script.js",
+  "lint": "npm run check && node --check public/script-home.js && node --check public/script-events.js && node --check public/script-gallery.js && node --check public/script-contact.js && node --check public/script-volunteer.js",
     "build": "npm run lint"
   },
   "dependencies": {

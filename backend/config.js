@@ -64,10 +64,10 @@ export const defaultSiteContent = {
     { title: 'Workshops', description: 'Practical sessions that help students move from basics to deployable projects.' },
     { title: 'Competitions', description: 'Problem solving, coding rounds, and regular challenges that sharpen fundamentals.' },
   ],
-  upcomingEvents: [
+    upcomingEvents: [
     { title: 'HackLPU 3.0', category: 'Hackathon', dateLabel: 'May 15, 2026', registrationDeadline: '2026-05-05T23:59:59+05:30', description: '36-hour flagship hackathon with mentors, checkpoints, and final demos.', registerEnabled: true },
-    { title: 'Web Dev Bootcamp', category: 'Workshop', dateLabel: 'Apr 20, 2026', registrationDeadline: '2026-04-18T23:59:59+05:30', description: '3-day workshop on HTML, CSS, JavaScript, and deployment basics.', registerEnabled: true },
-    { title: 'DSA Challenge Week', category: 'Competition', dateLabel: 'Apr 28, 2026', registrationDeadline: '2026-04-26T23:59:59+05:30', description: 'Daily coding rounds with rankings and prizes.', registerEnabled: true },
+    { title: 'Web Dev Bootcamp', category: 'Workshop', dateLabel: 'Apr 8, 2026', registrationDeadline: '2026-04-08T23:59:59+05:30', description: '3-day workshop on HTML, CSS, JavaScript, and deployment basics.', registerEnabled: true },
+    { title: 'DSA Challenge Week', category: 'Competition', dateLabel: 'Apr 8, 2026', registrationDeadline: '2026-04-08T23:59:59+05:30', description: 'Daily coding rounds with rankings and prizes.', registerEnabled: true },
   ],
   testimonials: [
     { quote: 'Arena LPU helped me move from tutorials to actually building projects with other students.', author: 'Ritika Verma', role: '3rd Year CSE' },
