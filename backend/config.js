@@ -66,7 +66,7 @@ export const defaultSiteContent = {
   ],
     upcomingEvents: [
     { title: 'HackLPU 3.0', category: 'Hackathon', dateLabel: 'May 15, 2026', registrationDeadline: '2026-05-05T23:59:59+05:30', description: '36-hour flagship hackathon with mentors, checkpoints, and final demos.', registerEnabled: true },
-    { title: 'Web Dev Bootcamp', category: 'Workshop', dateLabel: 'Apr 8, 2026', registrationDeadline: '2026-04-08T23:59:59+05:30', description: '3-day workshop on HTML, CSS, JavaScript, and deployment basics.', registerEnabled: true },
+    { title: 'Web Dev Bootcamp', category: 'Workshop', dateLabel: 'May 6, 2026', registrationDeadline: '2026-05-06T23:59:59+05:30', description: '3-day workshop on HTML, CSS, JavaScript, and deployment basics.', registerEnabled: true },
     { title: 'DSA Challenge Week', category: 'Competition', dateLabel: 'May 8, 2026', registrationDeadline: '2026-05-08T23:59:59+05:30', description: 'Daily coding rounds with rankings and prizes.', registerEnabled: true },
   ],
   testimonials: [
