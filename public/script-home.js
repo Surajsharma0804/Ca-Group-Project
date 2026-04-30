@@ -105,6 +105,93 @@ function fetchApiWithFallback(path, options, callback) {
   xhr.send(body);
 }
 
+function setupHeroGalleryRotation() {
+  if (bodyPage !== 'home') return;
+
+  const background = document.getElementById('heroGalleryBackground');
+  if (!background) return;
+
+  const slides = Array.from(background.querySelectorAll('.hero-gallery-slide'));
+  if (slides.length <= 1) return;
+
+  let activeIndex = Math.max(0, slides.findIndex((slide) => slide.classList.contains('active')));
+
+  function setActiveSlide(nextIndex) {
+    activeIndex = (nextIndex + slides.length) % slides.length;
+    slides.forEach(function (slide, index) {
+      slide.classList.toggle('active', index === activeIndex);
+    });
+  }
+
+  if (window.__hacklpuHeroGalleryInterval) window.clearInterval(window.__hacklpuHeroGalleryInterval);
+  window.__hacklpuHeroGalleryInterval = window.setInterval(function () {
+    setActiveSlide(activeIndex + 1);
+  }, 5000);
+
+  setActiveSlide(activeIndex);
+}
+
+function setupMomentsSlideshow() {
+  if (bodyPage !== 'home') return;
+
+  const slideshow = document.getElementById('homeMomentsSlideshow');
+  if (!slideshow) return;
+
+  const slides = Array.from(slideshow.querySelectorAll('.moment-slide'));
+  const prevButton = document.getElementById('momentsPrev');
+  const nextButton = document.getElementById('momentsNext');
+  const dotsContainer = document.getElementById('momentsDots');
+
+  if (slides.length === 0) return;
+
+  let activeIndex = Math.max(0, slides.findIndex((slide) => slide.classList.contains('active')));
+  const dots = [];
+
+  function setActiveSlide(nextIndex) {
+    activeIndex = (nextIndex + slides.length) % slides.length;
+    slides.forEach(function (slide, index) {
+      slide.classList.toggle('active', index === activeIndex);
+    });
+    dots.forEach(function (dot, index) {
+      dot.classList.toggle('active', index === activeIndex);
+    });
+  }
+
+  if (dotsContainer) {
+    dotsContainer.innerHTML = '';
+    slides.forEach(function (_slide, index) {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'slider-dot';
+      dot.setAttribute('aria-label', `Show moment ${index + 1}`);
+      dot.addEventListener('click', function () {
+        setActiveSlide(index);
+      });
+      dotsContainer.appendChild(dot);
+      dots.push(dot);
+    });
+  }
+
+  if (prevButton) {
+    prevButton.addEventListener('click', function () {
+      setActiveSlide(activeIndex - 1);
+    });
+  }
+
+  if (nextButton) {
+    nextButton.addEventListener('click', function () {
+      setActiveSlide(activeIndex + 1);
+    });
+  }
+
+  if (window.__hacklpuMomentsInterval) window.clearInterval(window.__hacklpuMomentsInterval);
+  window.__hacklpuMomentsInterval = window.setInterval(function () {
+    setActiveSlide(activeIndex + 1);
+  }, 6000);
+
+  setActiveSlide(activeIndex);
+}
+
 // Multi-step registration modal flow used by home/events pages.
 export function setupRegistrationFlow(configProvider = {}) {
   const modal = document.getElementById('registrationModal');
@@ -119,6 +206,7 @@ export function setupRegistrationFlow(configProvider = {}) {
   const payNowButton = document.getElementById('payNowButton');
   const formMessage = document.getElementById('formMessage');
   const stepTitle = document.getElementById('stepTitle');
+  const registrationHeaderLabel = document.getElementById('registrationHeaderLabel');
   const selectedEventLabel = document.getElementById('selectedEventLabel');
   const progressLabel = document.getElementById('progressLabel');
   const progressText = document.getElementById('progressText');
@@ -350,6 +438,14 @@ export function setupRegistrationFlow(configProvider = {}) {
     formMessage.className = 'message-box success';
   }
 
+  function markRegistrationComplete(message) {
+    showPaymentSuccess(message);
+    if (payNowButton) {
+      payNowButton.textContent = 'Registered';
+      payNowButton.disabled = true;
+    }
+  }
+
   function resetPaymentUi() {
     if (upiQrPanel) upiQrPanel.classList.add('hidden');
     if (upiQrImage) upiQrImage.removeAttribute('src');
@@ -375,6 +471,20 @@ export function setupRegistrationFlow(configProvider = {}) {
       }
     }
 
+    if (step === 3) {
+      if (teamSize <= 1) return true;
+
+      for (let i = 2; i <= teamSize; i += 1) {
+        const memberName = cleanText(document.getElementById(`memberName${i}`)?.value);
+        const memberEmail = cleanText(document.getElementById(`memberEmail${i}`)?.value);
+
+        if (!memberName || !memberEmail) {
+          showPaymentError(`Please fill member ${i} name and email before continuing.`);
+          return false;
+        }
+      }
+    }
+
     return true;
   }
 
@@ -383,14 +493,14 @@ export function setupRegistrationFlow(configProvider = {}) {
     const paymentMode = responseData.mode || selectedEventConfig.mode;
 
     if (paymentMode === 'free') {
-      showPaymentSuccess(selectedEventConfig.successMessage);
+      markRegistrationComplete(selectedEventConfig.successMessage);
       resetPaymentUi();
       return;
     }
 
     if (!upiQrPanel || !upiQrImage) return;
 
-    const qrUrl = responseData.qrCodeUrl;
+    const qrUrl = responseData.qrCodeUrl || responseData.qrCodeImageUrl;
     const qrId = responseData.qrCodeId;
     if (!qrUrl || !qrId) {
       showPaymentError('Unable to start payment. Please try again.');
@@ -413,6 +523,10 @@ export function setupRegistrationFlow(configProvider = {}) {
           if (status === 'paid') {
             updatePaymentStatus('Payment verified. Saving registration...');
             clearInterval(pollInterval);
+            if (paymentMode === 'demo') {
+              markRegistrationComplete(selectedEventConfig.successMessage);
+              return;
+            }
             submitRegistration(payload, responseData);
           }
         }
@@ -440,7 +554,7 @@ export function setupRegistrationFlow(configProvider = {}) {
           return;
         }
 
-        showPaymentSuccess(payloadResponse.message || selectedEventConfig.successMessage);
+        markRegistrationComplete(payloadResponse.message || selectedEventConfig.successMessage);
       }
     );
   }
@@ -483,6 +597,16 @@ export function setupRegistrationFlow(configProvider = {}) {
       return;
     }
 
+    if (teamSize > 1) {
+      for (let i = 2; i <= teamSize; i += 1) {
+        const member = payload.members[i - 2];
+        if (!member || !member.name || !member.email) {
+          showPaymentError(`Please fill member ${i} name and email before continuing.`);
+          return;
+        }
+      }
+    }
+
     if (selectedEventConfig.mode === 'free') {
       fetchApiWithFallback(
         '/api/registration',
@@ -503,7 +627,7 @@ export function setupRegistrationFlow(configProvider = {}) {
             return;
           }
 
-          showPaymentSuccess(payloadResponse.message || selectedEventConfig.successMessage);
+          markRegistrationComplete(payloadResponse.message || selectedEventConfig.successMessage);
         }
       );
       return;
@@ -516,6 +640,7 @@ export function setupRegistrationFlow(configProvider = {}) {
     selectedEvent = nextEvent;
     selectedEventConfig = eventConfig;
 
+    if (registrationHeaderLabel) registrationHeaderLabel.textContent = `${eventConfig.category || 'Event'} Registration`;
     if (selectedEventLabel) selectedEventLabel.textContent = nextEvent;
 
     setTeamSize(eventConfig.teamSize.min);
@@ -553,6 +678,7 @@ export function setupRegistrationFlow(configProvider = {}) {
 
   function handleModalClose() {
     modal.classList.remove('active');
+    modal.classList.add('hidden');
     resetPaymentUi();
   }
 
@@ -570,6 +696,11 @@ export function setupRegistrationFlow(configProvider = {}) {
     if (nextButton) {
       nextButton.addEventListener('click', function () {
         if (!validateStep(currentStep)) return;
+        if (currentStep === 2 && teamSize <= 1) {
+          setStep(4);
+          return;
+        }
+
         if (currentStep < 4) setStep(currentStep + 1);
       });
     }
@@ -711,3 +842,5 @@ export function setupDynamicEvents() {
 
 setupThemeToggle();
 setupNavActive();
+setupHeroGalleryRotation();
+setupMomentsSlideshow();

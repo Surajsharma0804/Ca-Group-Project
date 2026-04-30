@@ -1391,6 +1391,32 @@ body[data-theme="light"] .message-box.error {
   gap: 18px;
 }
 
+.form-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-field label {
+  display: block;
+  color: var(--muted);
+}
+
+.input-field input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--background));
+  color: var(--text);
+  padding: 14px 16px;
+}
+
 .team-size-grid {
   grid-template-columns: repeat(4, 1fr);
   margin: 20px 0 14px;
@@ -1450,10 +1476,13 @@ body[data-theme="light"] .demo-mode-note {
 .upi-qr-image {
   display: block;
   width: min(280px, 100%);
+  aspect-ratio: 1;
   margin: 0 auto 14px;
   border-radius: 18px;
   background: white;
   padding: 12px;
+  object-fit: contain;
+  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
 }
 
 .review-block + .review-block {

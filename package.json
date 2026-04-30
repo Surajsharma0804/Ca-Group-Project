@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node backend/server.js",
     "start:demo": "DEMO_PAYMENT_MODE=true node backend/server.js",
-    "dev": "node backend/server.js",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$listener = Get-NetTCPConnection -LocalPort 3001 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($listener) { Stop-Process -Id $listener.OwningProcess -Force }; node backend/server.js\"",
     "check": "node --check backend/server.js",
     "test": "npm run check",
   "lint": "npm run check && node --check public/script-home.js && node --check public/script-events.js && node --check public/script-gallery.js && node --check public/script-contact.js && node --check public/script-volunteer.js",

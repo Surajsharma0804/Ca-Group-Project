@@ -13,6 +13,82 @@ function cleanText(value) {
   return String(value || '').trim();
 }
 
+function escapeXml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function createDemoQrImageUrl(seedText, label) {
+  const size = 29;
+  const quietZone = 4;
+  const scale = 8;
+  const totalSize = (size + quietZone * 2) * scale;
+  const matrix = Array.from({ length: size }, () => Array(size).fill(false));
+  const hash = crypto.createHash('sha256').update(seedText).digest();
+
+  function paintFinder(startX, startY) {
+    for (let y = 0; y < 7; y += 1) {
+      for (let x = 0; x < 7; x += 1) {
+        const border = x === 0 || x === 6 || y === 0 || y === 6;
+        const center = x >= 2 && x <= 4 && y >= 2 && y <= 4;
+        matrix[startY + y][startX + x] = border || center;
+      }
+    }
+  }
+
+  paintFinder(0, 0);
+  paintFinder(size - 7, 0);
+  paintFinder(0, size - 7);
+
+  for (let i = 8; i < size - 8; i += 1) {
+    matrix[6][i] = i % 2 === 0;
+    matrix[i][6] = i % 2 === 0;
+  }
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const inFinderArea =
+        (x < 7 && y < 7) ||
+        (x >= size - 7 && y < 7) ||
+        (x < 7 && y >= size - 7) ||
+        x === 6 ||
+        y === 6;
+      if (inFinderArea) continue;
+
+      const byte = hash[(x * 17 + y * 31) % hash.length];
+      const bit = (byte >> ((x + y) % 8)) & 1;
+      const accent = ((x + y + byte) % 11) < 4;
+      matrix[y][x] = Boolean(bit ^ Number(accent));
+    }
+  }
+
+  const modules = [];
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      if (!matrix[y][x]) continue;
+      modules.push(`<rect x="${(x + quietZone) * scale}" y="${(y + quietZone) * scale}" width="${scale}" height="${scale}" rx="1" ry="1" />`);
+    }
+  }
+
+  const safeLabel = escapeXml(label);
+  const safeSeed = escapeXml(seedText);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalSize} ${totalSize}" width="${totalSize}" height="${totalSize}" role="img" aria-label="${safeLabel}">
+      <rect width="100%" height="100%" fill="#ffffff"/>
+      <g fill="#000000" shape-rendering="crispEdges">${modules.join('')}</g>
+      <rect x="${quietZone * scale}" y="${quietZone * scale}" width="${size * scale}" height="${size * scale}" fill="none" stroke="#111111" stroke-width="2" rx="8" ry="8"/>
+      <text x="${totalSize / 2}" y="${totalSize - 16}" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#111111">${safeLabel}</text>
+      <text x="${totalSize / 2}" y="${totalSize - 2}" font-family="Arial, Helvetica, sans-serif" font-size="8" text-anchor="middle" fill="#666666">${safeSeed}</text>
+    </svg>
+  `.trim();
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 let razorpay = null;
 if (config.razorpayKeyId && config.razorpayKeySecret) {
   try {
@@ -104,22 +180,31 @@ async function appendRecord(_storeName, record) {
 
 async function createRegistration(record) {
   const database = await getDatabaseSafe();
+  const recordToInsert = { ...record };
+  delete recordToInsert._id;
+
   if (database) {
-    await database.collection('registrations').insertOne(record);
+    const collection = database.collection('registrations');
+    await collection.updateOne({ id: recordToInsert.id }, { $setOnInsert: recordToInsert }, { upsert: true });
+    const saved = await collection.findOne({ id: recordToInsert.id });
+    return saved || recordToInsert;
   } else {
-    runtimeStore.registrations.push(record);
+    runtimeStore.registrations.push(recordToInsert);
   }
-  return record;
+  return recordToInsert;
 }
 
 async function createVolunteerApplication(record) {
   const database = await getDatabaseSafe();
+  const recordToInsert = { ...record };
+  delete recordToInsert._id;
+
   if (database) {
-    await database.collection('volunteers').insertOne(record);
+    await database.collection('volunteers').insertOne(recordToInsert);
   } else {
-    runtimeStore.volunteers.push(record);
+    runtimeStore.volunteers.push(recordToInsert);
   }
-  return record;
+  return recordToInsert;
 }
 
 async function finalizePaidRegistration(session, paymentId) {
@@ -154,8 +239,11 @@ async function finalizePaidRegistration(session, paymentId) {
   if (existing) return existing;
 
   try {
-    await collection.insertOne(record);
-    return record;
+    const recordToInsert = { ...record };
+    delete recordToInsert._id;
+    await collection.updateOne({ paymentSessionId: session.id }, { $setOnInsert: recordToInsert }, { upsert: true });
+    const saved = await collection.findOne({ paymentSessionId: session.id });
+    return saved || recordToInsert;
   } catch (error) {
     if (error && error.code === 11000) {
       const duplicate = await collection.findOne({ paymentSessionId: session.id });
@@ -334,9 +422,12 @@ app.post('/api/create-upi-session', async (request, response) => {
 
     if (isDemoPaymentMode) {
       const qrCodeId = `demo_qr_${sessionId}`;
-      const qrCodeImageUrl = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg"><text x="10" y="20">Demo QR ${eventTitle} Rs.${amount}</text></svg>`)}`;
+      const qrCodeImageUrl = createDemoQrImageUrl(
+        `${sessionId}|${eventTitle}|${amount}|${payload.teamName || ''}|${payload.head?.email || ''}`,
+        `Demo QR • ${eventTitle}`
+      );
       await createPaymentSession({ id: sessionId, status: 'pending', kind: 'demo_upi_qr', qrCodeId, qrCodeImageUrl, amount, closeBy, createdAt: new Date().toISOString(), demoAutoConfirmAt: Date.now() + 9000, ...payload });
-      response.json({ sessionId, qrCodeId, qrCodeImageUrl, amount: Math.round(amount * 100), amountDisplay: amount, currency: event.currency, expiresAt: new Date(closeBy * 1000).toISOString(), mode: 'demo' });
+      response.json({ sessionId, qrCodeId, qrCodeUrl: qrCodeImageUrl, qrCodeImageUrl, amount: Math.round(amount * 100), amountDisplay: amount, currency: event.currency, expiresAt: new Date(closeBy * 1000).toISOString(), mode: 'demo' });
       return;
     }
 
@@ -366,7 +457,10 @@ app.post('/api/registration/upi', async (request, response) => {
 
     if (isDemoPaymentMode) {
       const qrCodeId = `demo_qr_${sessionId}`;
-      const qrCodeImageUrl = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg"><text x="10" y="20">Demo QR ${eventTitle} Rs.${amount}</text></svg>`)}`;
+      const qrCodeImageUrl = createDemoQrImageUrl(
+        `${sessionId}|${eventTitle}|${amount}|${payload.teamName || ''}|${payload.head?.email || ''}`,
+        `Demo QR • ${eventTitle}`
+      );
       await createPaymentSession({ id: sessionId, status: 'pending', kind: 'demo_upi_qr', qrCodeId, qrCodeImageUrl, amount, closeBy, createdAt: new Date().toISOString(), demoAutoConfirmAt: Date.now() + 9000, ...payload, eventTitle });
       return response.json({ sessionId, qrCodeId, qrCodeUrl: qrCodeImageUrl, qrCodeImageUrl, amount: Math.round(amount * 100), amountDisplay: amount, currency: event.currency, expiresAt: new Date(closeBy * 1000).toISOString(), mode: 'demo' });
     }
@@ -401,9 +495,8 @@ app.get('/api/registration/upi/:qrId', async (request, response) => {
 
       if (session.demoAutoConfirmAt && Date.now() >= Number(session.demoAutoConfirmAt)) {
         const paymentId = `demo_pay_${session.id.slice(0, 12)}`;
-        const record = await finalizePaidRegistration(session, paymentId);
-        await updatePaymentSession(session.id, (current) => ({ ...current, status: 'paid', paymentId, registrationId: record?.id, paidAt: new Date().toISOString() }));
-        return response.json({ success: true, status: 'paid', registrationId: record?.id });
+        await updatePaymentSession(session.id, (current) => ({ ...current, status: 'paid', paymentId, paidAt: new Date().toISOString() }));
+        return response.json({ success: true, status: 'paid' });
       }
 
       return response.json({ success: false, status: 'pending', amountDisplay: session.amount, expiresAt: new Date(session.closeBy * 1000).toISOString() });
@@ -414,10 +507,9 @@ app.get('/api/registration/upi/:qrId', async (request, response) => {
     const payments = await razorpay.qrCode.fetchAllPayments(session.qrCodeId, { count: 10 });
     const successfulPayment = (payments.items || []).find((payment) => payment.status === 'captured' && Number(payment.amount) === Math.round(session.amount * 100));
     if (successfulPayment) {
-      const record = await finalizePaidRegistration(session, successfulPayment.id);
-      await updatePaymentSession(session.id, (current) => ({ ...current, status: 'paid', paymentId: successfulPayment.id, registrationId: record.id, paidAt: new Date().toISOString() }));
+      await updatePaymentSession(session.id, (current) => ({ ...current, status: 'paid', paymentId: successfulPayment.id, paidAt: new Date().toISOString() }));
       try { if (qrDetails.status !== 'closed') await razorpay.qrCode.close(session.qrCodeId); } catch {}
-      return response.json({ success: true, status: 'paid', registrationId: record.id });
+      return response.json({ success: true, status: 'paid' });
     }
 
     if (qrDetails.status === 'closed' || (session.closeBy && Date.now() > session.closeBy * 1000)) {
@@ -448,7 +540,6 @@ app.post('/api/registration', async (request, response) => {
       if (!session || session.status !== 'paid') return response.status(400).json({ message: 'Payment not verified yet.' });
 
       const record = await finalizePaidRegistration(session, session.paymentId || `manual_${Date.now()}`);
-      await createRegistration({ id: record.id, ...record });
       return response.json({ success: true, message: event.successMessage || 'Registration completed successfully.', registrationId: record.id });
     }
 
@@ -522,9 +613,8 @@ app.get("/api/payment-status/:sessionId", async (request, response) => {
 
       if (session.demoAutoConfirmAt && Date.now() >= Number(session.demoAutoConfirmAt)) {
         const paymentId = `demo_pay_${session.id.slice(0, 12)}`;
-        const record = await finalizePaidRegistration(session, paymentId);
-        await updatePaymentSession(sessionId, (current) => ({ ...current, status: 'paid', paymentId, registrationId: record?.id, paidAt: new Date().toISOString() }));
-        response.json({ success: true, status: 'paid', registrationId: record?.id });
+        await updatePaymentSession(sessionId, (current) => ({ ...current, status: 'paid', paymentId, paidAt: new Date().toISOString() }));
+        response.json({ success: true, status: 'paid' });
         return;
       }
 
@@ -560,12 +650,11 @@ app.get("/api/payment-status/:sessionId", async (request, response) => {
       const payments = await razorpay.qrCode.fetchAllPayments(session.qrCodeId, { count: 10 });
       const successfulPayment = (payments.items || []).find((payment) => payment.status === 'captured' && Number(payment.amount) === Math.round(session.amount * 100));
       if (successfulPayment) {
-        const record = await finalizePaidRegistration(session, successfulPayment.id);
-        await updatePaymentSession(sessionId, (current) => ({ ...current, status: 'paid', paymentId: successfulPayment.id, registrationId: record.id, paidAt: new Date().toISOString() }));
+        await updatePaymentSession(sessionId, (current) => ({ ...current, status: 'paid', paymentId: successfulPayment.id, paidAt: new Date().toISOString() }));
         if (qrDetails.status !== 'closed') {
           try { await razorpay.qrCode.close(session.qrCodeId); } catch {}
         }
-        response.json({ success: true, status: 'paid', registrationId: record.id });
+        response.json({ success: true, status: 'paid' });
         return;
       }
 
@@ -713,10 +802,28 @@ async function startServer() {
       logMongoFallbackOnce(error);
     }
 
-    app.listen(config.port, "0.0.0.0", () => {
-      const url = `http://localhost:${config.port}/`;
-      console.log(`HackLPU app running on ${url}`);
-    });
+    const portsToTry = [config.port, config.port + 1, config.port + 2];
+
+    for (const port of portsToTry) {
+      try {
+        await new Promise((resolve, reject) => {
+          const server = app.listen(port, '0.0.0.0', () => resolve(server));
+          server.on('error', reject);
+        });
+
+        const url = `http://localhost:${port}/`;
+        if (port !== config.port) {
+          console.warn(`Port ${config.port} is busy, started on ${port} instead.`);
+        }
+        console.log(`HackLPU app running on ${url}`);
+        return;
+      } catch (error) {
+        if (error && error.code === 'EADDRINUSE') continue;
+        throw error;
+      }
+    }
+
+    throw new Error(`Unable to start server on ports ${portsToTry.join(', ')}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Unable to start server: ${message}`);
