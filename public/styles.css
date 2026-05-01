@@ -1448,6 +1448,15 @@ body[data-theme="light"] .message-box.error {
   padding: 24px;
 }
 
+.payment-panel {
+  isolation: isolate;
+}
+
+.payment-panel::before,
+.payment-panel::after {
+  pointer-events: none;
+}
+
 .demo-mode-note {
   margin: 12px 0 0;
   padding: 10px 12px;
@@ -1483,6 +1492,11 @@ body[data-theme="light"] .demo-mode-note {
   padding: 12px;
   object-fit: contain;
   box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
+}
+
+.payment-panel .primary-button.full-width {
+  position: relative;
+  z-index: 1;
 }
 
 .review-block + .review-block {
