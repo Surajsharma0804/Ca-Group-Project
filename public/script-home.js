@@ -649,16 +649,8 @@ export function setupRegistrationFlow(configProvider = {}) {
   }
 
   function setupEventTriggers() {
-    // Support both dynamically rendered cards (data-event-card) and static .event-card markup
-    document.querySelectorAll('[data-event-card], .event-card').forEach(function (card) {
-      card.addEventListener('click', function () {
-        const parsedConfig = parseEventConfig(card, card.dataset.eventTitle);
-        updateSelectedEvent(card.dataset.eventTitle, parsedConfig);
-        setStep(1);
-        modal.classList.remove('hidden');
-        modal.classList.add('active');
-      });
-    });
+    // Card clicks no longer open the form; use the explicit Register button only.
+    return;
   }
 
   function setupCtaTriggers() {
